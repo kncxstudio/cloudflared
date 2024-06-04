@@ -26,6 +26,7 @@ import (
 	"github.com/cloudflare/cloudflared/token"
 	"github.com/cloudflare/cloudflared/tracing"
 	"github.com/cloudflare/cloudflared/watcher"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -49,7 +50,7 @@ var (
 	}
 )
 
-func main() {
+func main1() {
 	// FIXME: TUN-8148: Disable QUIC_GO ECN due to bugs in proper detection if supported
 	os.Setenv("QUIC_GO_DISABLE_ECN", "1")
 
@@ -157,6 +158,21 @@ To determine if an update happened in a script, check for error code 11.`,
 	cmds = append(cmds, access.Commands()...)
 	cmds = append(cmds, tail.Command())
 	return cmds
+}
+
+func main() {
+	graceShutdownC := make(chan struct{})
+	access.Init(graceShutdownC, "DEV")
+	forwarder := config.Forwarder{
+		URL:           "https://sub.xxx.com",
+		Listener:      "localhost:9967",
+		TokenClientID: "",
+		TokenSecret:   "",
+		Destination:   "",
+	}
+	logger := zerolog.New(os.Stdout)
+	logger = logger.Level(zerolog.InfoLevel)
+	access.StartForwarder(forwarder, graceShutdownC, &logger)
 }
 
 func flags() []cli.Flag {
